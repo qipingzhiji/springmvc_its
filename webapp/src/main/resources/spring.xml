@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:p="http://www.springframework.org/schema/p" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop" xmlns:mybatis="http://mybatis.org/schema/mybatis-spring"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd http://www.alibaba.com/schema/stat http://www.alibaba.com/schema/stat.xsd http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring.xsd">
+
+    <context:property-placeholder location="classpath:datasource/datasource.properties"></context:property-placeholder>
+
+    <context:component-scan base-package="com.its.dao,com.its.service,com.its.config">
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.web.bind.annotation.RestController"/>
+    </context:component-scan>
+
+    <bean  id="dataSource" class="com.alibaba.druid.pool.DruidDataSource"  p:username="${user-name}" p:password="${user-password}">
+        <property name="driverClassName" value="${driverClassName}"></property>
+        <property name="url" value="${url}"></property>
+        <property name="initialSize" value="${initialSize}"></property>
+        <property name="maxActive" value="${maxActive}"></property>
+        <property name="maxWait" value="${maxWait}"></property>
+        <property name="connectionProperties" value="config.decrypt=true;config.decrypt.key=${public-key}"></property>
+    </bean>
+
+    <bean id="dataSourceTransactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager" >
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <tx:advice transaction-manager="dataSourceTransactionManager" id="transactionInterceptor">
+        <tx:attributes>
+            <tx:method name="get*" read-only="true"/>
+            <tx:method name="list*" read-only="true"/>
+            <tx:method name="query*" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+
+    <!--aop 事务配置-->
+    <aop:config>
+        <aop:pointcut id="transactionPointcut" expression="execution(* com.its.service..*(..))"/>
+        <aop:advisor advice-ref="transactionInterceptor" pointcut-ref="transactionPointcut"></aop:advisor>
+    </aop:config>
+
+    <!--事务支持注解配置-->
+    <tx:annotation-driven transaction-manager="dataSourceTransactionManager" proxy-target-class="true"></tx:annotation-driven>
+
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <property name="dataSource" ref="dataSource"></property>
+        <property name="mapperLocations" value="classpath:mybatis/mapper/*.xml"></property>
+        <property name="configLocation" value="classpath:mybatis/config/mybatis-config.xml"></property>
+    </bean>
+
+    <mybatis:scan base-package="com.its.dao" ></mybatis:scan>
+
+</beans>
